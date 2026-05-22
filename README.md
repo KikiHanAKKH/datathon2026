@@ -13,7 +13,7 @@ The app groups applicants with similar financial and demographic patterns using 
 
 ## Dataset
 
-The dataset contains anonymized features (`A1–A14`) with approximate meanings inferred from competition hints.
+The dataset contains anonymized features (`A1–A14`) with approximate meanings inferred from feature distributions and dataset characteristics.
 
 Examples:
 
