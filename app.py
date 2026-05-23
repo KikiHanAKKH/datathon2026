@@ -28,7 +28,7 @@ import joblib
 # Change this ONE value to swap models. It must match a folder in outputs/
 # created by the pipeline, e.g. "credit_drop_A2", "credit_full",
 # "credit_drop_A1_A2". The app adapts to whatever k that model used.
-MODEL_VERSION = "credit_drop_A2"
+MODEL_VERSION = "final"
 
 VERSION_DIR = f"outputs/{MODEL_VERSION}"
 
@@ -107,31 +107,9 @@ def centered_table(df):
 
 
 # ---------- TRANSFORM + PREDICT ----------
-def predict_cluster(user_input, model, scaler_bundle, feature_columns):
-    """Turn one applicant's raw inputs into the exact processed form the
-    model expects, then predict their cluster.
-
-    Works for any model version: the `reindex` step keeps exactly the
-    columns that model trained on, so a model trained with A2 and one
-    trained without A2 are both handled correctly with no special-casing.
-    """
+def predict_cluster(user_input, pipeline):
     user_df = pd.DataFrame([user_input])
-
-    # One-hot encode the categorical code columns that are present.
-    cats = [c for c in CATEGORICAL_COLS if c in user_df.columns]
-    user_df = pd.get_dummies(user_df, columns=cats, dtype=int)
-
-    # Force the row into EXACTLY the columns this model trained on.
-    # Missing one-hot columns become 0; any column the model didn't use
-    # (e.g. A2 for the age-dropped model) is dropped automatically.
-    user_df = user_df.reindex(columns=feature_columns, fill_value=0)
-
-    # Scale the continuous columns with the SAVED scaler (transform only).
-    scaler = scaler_bundle["scaler"]
-    continuous_cols = scaler_bundle["continuous_cols"]
-    user_df[continuous_cols] = scaler.transform(user_df[continuous_cols])
-
-    return int(model.predict(user_df)[0])
+    return int(pipeline.predict(user_df)[0])
 
 
 def describe_differences(profiles, user_cluster):
@@ -170,8 +148,8 @@ st.info(
 
 # Load the model up front; a missing file is caught here.
 try:
-    model, scaler_bundle, feature_columns, profiles = \
-        load_model_files(VERSION_DIR)
+    profiles = pd.read_csv(f"{VERSION_DIR}/cluster_profiles.csv")
+    pipeline = joblib.load(f"{VERSION_DIR}/clustering_pipeline.pkl")
 except FileNotFoundError as e:
     st.error(
         f"Could not load a required model file: {e}\n\n"
@@ -248,8 +226,7 @@ if submitted:
     st.header("Your Cluster Result")
 
     try:
-        cluster_id = predict_cluster(user_input, model, scaler_bundle,
-                                     feature_columns)
+        cluster_id = predict_cluster(user_input, pipeline)
     except Exception as e:
         st.error(f"Could not assign a cluster: {e}")
         st.stop()
