@@ -30,6 +30,12 @@ import joblib
 # "credit_drop_A1_A2". The app adapts to whatever k that model used.
 MODEL_VERSION = "final"
 
+APPROVAL_RATES = {
+    0: 0.66,
+    1: 0.13,
+    2: 0.60
+}
+
 VERSION_DIR = f"outputs/{MODEL_VERSION}"
 
 
@@ -239,9 +245,19 @@ if submitted:
 
     # --- the user's cluster ---
     st.subheader(f"You most resemble Cluster {cluster_id}")
-    if "approval_rate" in user_row:
-        st.metric("Historical approval rate of this cluster",
-                  f"{user_row['approval_rate'] * 100:.1f}%")
+    approval_rate = APPROVAL_RATES.get(cluster_id)
+
+    if approval_rate is not None:
+        st.metric(
+            "Historical approval rate for this cluster",
+            f"{approval_rate * 100:.0f}%"
+        )
+
+        st.write(
+            f"Based on past applicants in Cluster {cluster_id}, "
+            f"about {approval_rate * 100:.0f}% were approved."
+        )
+    
     st.info(
         "This is the HISTORICAL approval rate of past applicants in this "
         "cluster. It describes the past -- it is not a prediction or a "
